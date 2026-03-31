@@ -7,7 +7,6 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 import org.openqa.selenium.chrome.ChromeOptions;
-import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -62,7 +61,7 @@ class GreenCityNegativeRegistrationTest {
         Thread.sleep(1000);
 
         // Check that the error for email appeared
-        assertEmailErrorVisible();
+        assertEmailErrorVisible(getEmailErrorMessageElement());
         // Check that the registration button is disabled (or registration did not occur)
         assertSignUpButtonDisabled();
     }
@@ -70,37 +69,79 @@ class GreenCityNegativeRegistrationTest {
     @Test
     @DisplayName("All fields empty → required errors shown")
     void shouldShowErrorsForAllEmptyFields() throws InterruptedException {
-        // TODO:
-        // 1. Click each field or try to click Sign Up
-        // 2. Check assertEmailErrorVisible(), assertUsernameErrorVisible(), etc.
+        typeEmail("");
+        typeUsername("");
+        typePassword("");
+        typeConfirm("");
+
+        clickSignUp();
+        Thread.sleep(1000);
+
+        assertRequiredError(getEmailErrorMessageElement());
+        assertRequiredError(getUserNameErrorMessageElement());
+        assertPasswordErrorVisible(getPasswordErrorMessageElement());
+        assertRequiredError(getConfirmPasswordErrorMessageElement());
+
+        assertSignUpButtonDisabled();
     }
 
     @Test
     @DisplayName("Empty username → username required")
     void shouldShowErrorForEmptyUsername() throws InterruptedException {
-        // TODO:
-        // 1. Enter valid email and passwords
-        // 2. Leave username empty (or click and leave)
-        // 3. assertUsernameErrorVisible()
+        typeEmail("test@gmail.com");
+        typeUsername("");
+        typePassword("ValidPass123!");
+        typeConfirm("ValidPass123!");
+
+        clickSignUp();
+        Thread.sleep(1000);
+
+        assertRequiredError(getUserNameErrorMessageElement());
+        assertSignUpButtonDisabled();
     }
 
     @Test
     @DisplayName("Short password (<8) → password rule error")
     void shouldShowErrorForShortPassword() throws InterruptedException {
-        // TODO:
-        // Enter a password like "123" and check for the error
+        typeEmail("test@gmail.com");
+        typeUsername("ValidUsername");
+        typePassword("1234567");
+        typeConfirm("1234567");
+
+        Thread.sleep(1000);
+
+        assertPasswordErrorVisible(getPasswordErrorMessageElement());
+        assertSignUpButtonDisabled();
     }
 
     @Test
     @DisplayName("Password with space → password rule error")
     void shouldShowErrorForPasswordWithSpace() throws InterruptedException {
-        // Check a specific password validation rule
+        typeEmail("test@gmail.com");
+        typeUsername("ValidUsername");
+        typePassword("Pass 1234");
+        typeConfirm("Pass 1234");
+
+        Thread.sleep(1000);
+
+        assertPasswordErrorVisible(getPasswordErrorMessageElement());
+        assertSignUpButtonDisabled();
     }
 
     @Test
     @DisplayName("Confirm password mismatch → confirm error")
     void shouldShowErrorForPasswordMismatch() throws InterruptedException {
-        // Enter different passwords in the Password and Confirm Password fields
+        typeEmail("test@gmail.com");
+        typeUsername("ValidUsername");
+        typePassword("ValidPass123!");
+        typeConfirm("DifferentPass123!");
+
+        Thread.sleep(1000);
+
+        clickSignUp();
+
+        assertConfirmPasswordErrorVisible();
+        assertSignUpButtonDisabled();
     }
 
     // --- HELPERS (Helper methods) ---
@@ -134,16 +175,40 @@ class GreenCityNegativeRegistrationTest {
         driver.findElement(By.cssSelector("button[type='submit'].greenStyle")).click();
     }
 
-    private void assertEmailErrorVisible() {
-        WebElement error = driver.findElement(By.id("email-err-msg"));
-        assertTrue(error.isDisplayed(), "Email error message should be visible");
+    private WebElement getEmailErrorMessageElement() { return driver.findElement(By.id("email-err-msg")); }
+
+    private WebElement getUserNameErrorMessageElement() { return driver.findElement(By.id("firstname-err-msg")); }
+
+    private WebElement getPasswordErrorMessageElement() { return driver.findElement(By.cssSelector("p.password-not-valid")); }
+
+    private WebElement getConfirmPasswordErrorMessageElement() { return driver.findElement(By.id("confirm-err-msg")); }
+
+    private void assertEmailErrorVisible(WebElement errorElement) {
+        assertTrue(errorElement.isDisplayed(), "Email error message should be visible");
         // contains("required") or other text to avoid dependency on the full phrase
-        assertTrue(error.getText().toLowerCase().contains("check") || error.getText().toLowerCase().contains("correctly"));
+        assertTrue(getEmailErrorMessageElement().getText().toLowerCase().contains("check") ||
+                getEmailErrorMessageElement().getText().toLowerCase().contains("correctly"));
     }
 
-    private void assertUsernameErrorVisible() {
-        // Find the error element for the username (id may differ, check on the site)
-        // For example: driver.findElement(By.xpath("//input[@id='firstName']/following-sibling::div"))
+    private void assertRequiredError(WebElement errorElement) {
+        assertTrue(errorElement.isDisplayed(), "Email error message should be visible");
+        assertTrue(errorElement.getText().toLowerCase().contains("required"));
+    }
+
+    private void assertPasswordErrorVisible(WebElement errorElement) {
+        assertTrue(errorElement.isDisplayed(), "Password error should be visible");
+
+        String text = errorElement.getText().toLowerCase();
+
+        assertTrue(
+                text.contains("8") || text.contains("characters") || text.contains("uppercase"),
+                "Unexpected password error message: " + text
+        );
+    }
+
+    private void assertConfirmPasswordErrorVisible() {
+        assertTrue(getConfirmPasswordErrorMessageElement().isDisplayed(), "Email error message should be visible");
+        assertTrue(getConfirmPasswordErrorMessageElement().getText().toLowerCase().contains("do not match"));
     }
 
     private void assertSignUpButtonDisabled() {
